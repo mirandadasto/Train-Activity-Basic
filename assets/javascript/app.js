@@ -64,18 +64,65 @@ database.ref().on("child_added", function(childSnapshot)
     console.log(trainFirstArrival);
     console.log(trainFrequency);
 
-    //Calculate train next arrival
     //Calculate minutes away
+    var m = moment();
+    var currentTime = m; // now
+    var startOfDay =  moment().startOf('day'); // start of day
+
+    var currentMinutes = Math.floor((currentTime - startOfDay) / 60000); // Important: divide by milliseconds in a minute to convert to minutes
+
+    var nextArrival = calculateNextArrival(trainFirstArrival, parseInt(trainFrequency), currentMinutes);
+
+    var trainNextArrival = convertMinutesToTimeStamp(nextArrival);
+    var trainMinutesAway = nextArrival - currentMinutes;
 
     // Create the new row
     var newRow = $("<tr>").append(
         $("<td>").text(trainName),
         $("<td>").text(trainDestination),
         $("<td>").text(trainFrequency),
-        // $("<td>").text(trainNextArrival),
-        // $("<td>").text(minutesAway)
+        $("<td>").text(trainNextArrival),
+        $("<td>").text(trainMinutesAway)
     );
 
     // Append the new row to the table
     $("#train-table > tbody").append(newRow);
 });
+
+//Calculate train next arrival
+function calculateNextArrival(trainFirstArrival, trainFrequency, currentMinutes)
+{
+    var firstArrivalInMinutes = convertTimeStampToMinutes(trainFirstArrival);
+
+    var nextArrival = firstArrivalInMinutes;
+    while(nextArrival < currentMinutes)
+    {
+        nextArrival += trainFrequency;
+    }
+
+    return nextArrival;
+}
+
+function convertTimeStampToMinutes(timeStamp)
+{
+    var isPM = timeStamp.includes("PM");
+    var segments = timeStamp.split(":");
+    var hour = parseInt(segments[0]);
+    var minutes = parseInt(segments[1].replace(" PM", "").replace(" AM", ""));
+
+    var result = ((isPM ? hour + 12 : hour) * 60) + minutes;
+    return result;
+}
+
+function convertMinutesToTimeStamp(minutes)
+{
+    // determine remainder minutes
+    var minutes = minutes % 60;
+    // find total hours
+    var hours = Math.floor(minutes / 60);
+    // determine PM/AM
+    var isPM = hours > 11;
+
+    var timestamp = (isPM ? hours - 12 : hours) + ":" + ((minutes < 10) ? ("0" + minutes) : minutes) + (isPM ? " PM" : " AM");
+    return timestamp;
+}
